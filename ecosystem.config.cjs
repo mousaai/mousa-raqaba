@@ -7,6 +7,9 @@ module.exports = {
     exec_mode: "fork",
     env: {
       NODE_ENV: "production",
+      MY_GOOGLE_AI_KEY: "AIzaSyAIMIAu6wWYjHj8CFjm4fq7uQOo2PNEibA",
+      OPENAI_API_KEY: "AIzaSyAIMIAu6wWYjHj8CFjm4fq7uQOo2PNEibA",
+      OPENAI_MODEL: "gemini-2.5-flash",
       PORT: "3003"
     },
     error_file: "/var/log/mousa-raqaba/error.log",
