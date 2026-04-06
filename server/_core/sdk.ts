@@ -39,21 +39,8 @@ class OAuthService {
   }
 
   private decodeState(state: string): string {
-    try {
-      const decoded = atob(state);
-      // New format: JSON with { redirectUri, returnPath }
-      try {
-        const parsed = JSON.parse(decoded);
-        if (parsed && typeof parsed.redirectUri === "string") {
-          return parsed.redirectUri;
-        }
-      } catch {
-        // Not JSON — legacy format: decoded string is the redirectUri directly
-      }
-      return decoded;
-    } catch {
-      return "/";
-    }
+    const redirectUri = atob(state);
+    return redirectUri;
   }
 
   async getTokenByCode(
@@ -283,9 +270,10 @@ class SDKServer {
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
 
-    // If user not in DB, sync from OAuth server automatically
+    // If user not in DB, try to sync from OAuth server or use JWT payload directly
     if (!user) {
       try {
+        // First try Manus OAuth server (for Manus-issued tokens)
         const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
         await db.upsertUser({
           openId: userInfo.openId,
@@ -296,8 +284,26 @@ class SDKServer {
         });
         user = await db.getUserByOpenId(userInfo.openId);
       } catch (error) {
-        console.error("[Auth] Failed to sync user from OAuth:", error);
-        throw ForbiddenError("Failed to sync user info");
+        // Fallback: JWT was issued by mousa.ai directly (Google/Apple OAuth)
+        // The JWT payload already contains openId and name — use them directly
+        console.warn("[Auth] Manus OAuth sync failed, using JWT payload directly:", String(error));
+        try {
+          // Derive loginMethod from openId prefix (e.g. "google:SUB" -> "google")
+          const loginMethod = sessionUserId.includes(":") 
+            ? sessionUserId.split(":")[0] 
+            : null;
+          await db.upsertUser({
+            openId: sessionUserId,
+            name: session.name || null,
+            email: null,
+            loginMethod,
+            lastSignedIn: signedInAt,
+          });
+          user = await db.getUserByOpenId(sessionUserId);
+        } catch (fallbackError) {
+          console.error("[Auth] Failed to create user from JWT payload:", fallbackError);
+          throw ForbiddenError("Failed to sync user info");
+        }
       }
     }
 
