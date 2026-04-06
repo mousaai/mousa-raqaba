@@ -20,6 +20,7 @@ import { useAuth } from "./_core/hooks/useAuth";
 // ─── Critical: Home loads eagerly (first paint) ───────────────────────────
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
+import { trpc } from "@/lib/trpc";
 
 // ─── Sub-platform hostname detection ─────────────────────────────────────
 // Maps subdomain → platform page component
@@ -232,6 +233,47 @@ function AppInner() {
   return null;
 }
 
+
+/**
+ * SSOTokenHandler — reads ?token= from URL after OAuth redirect from mousa.ai
+ * Calls mousa.verifyToken to update mousaUserId and mousaBalance in DB,
+ * then removes the token from URL to keep it clean.
+ */
+function SSOTokenHandler() {
+  const verifyToken = trpc.mousa.verifyToken.useMutation();
+  const utils = trpc.useUtils();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ssoToken = params.get("token");
+    if (!ssoToken) return;
+
+    // Remove token from URL immediately (clean URL)
+    params.delete("token");
+    const newSearch = params.toString();
+    const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "");
+    window.history.replaceState({}, "", newUrl);
+
+    // Verify token with mousa.ai and update user record
+    verifyToken.mutate(
+      { token: ssoToken },
+      {
+        onSuccess: (data) => {
+          if (data.success) {
+            // Refresh auth state to pick up updated mousaUserId/mousaBalance
+            utils.auth.me.invalidate();
+          }
+        },
+        onError: (err) => {
+          console.warn("[SSO] Token verification failed:", err.message);
+        },
+      }
+    );
+  }, []); // Run once on mount
+
+  return null;
+}
+
 function App() {
   const { i18n } = useTranslation();
 
@@ -274,7 +316,8 @@ function App() {
             }}
           />
           <AppInner />
-          <Router />
+          <SSOTokenHandler />
+            <Router />
           <CookieConsent />
           <FeedbackWidget floating={true} platform="general" />
         </TooltipProvider>
