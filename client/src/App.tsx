@@ -274,6 +274,24 @@ function SSOTokenHandler() {
   return null;
 }
 
+
+function BalanceSyncer() {
+  const { user, isAuthenticated } = useAuth();
+  const syncBalance = trpc.mousa.syncBalance.useMutation();
+  const utils = trpc.useUtils();
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    const needsSync = !user.mousaUserId || !user.mousaLastSync || 
+      (Date.now() - new Date(user.mousaLastSync).getTime() > 5 * 60 * 1000);
+    if (!needsSync) return;
+    syncBalance.mutate(undefined, {
+      onSuccess: (data) => { if (data.synced) utils.auth.me.invalidate(); }
+    });
+  }, [isAuthenticated, user?.id]);
+  return null;
+}
+
+
 function App() {
   const { i18n } = useTranslation();
 
@@ -317,6 +335,7 @@ function App() {
           />
           <AppInner />
           <SSOTokenHandler />
+            <BalanceSyncer />
             <Router />
           <CookieConsent />
           <FeedbackWidget floating={true} platform="general" />
