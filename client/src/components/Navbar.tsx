@@ -7,6 +7,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Menu, X, ChevronDown, LogIn, LogOut, User, Zap, Settings } from "lucide-react";
 import { getLoginUrl } from "@/const";
+import { openAuthSheet } from "@/components/AuthSheet";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -235,17 +236,13 @@ export default function Navbar() {
             ) : !loading ? (
               /* ── Unauthenticated: Login + Register buttons ── */
               <>
-                <a href={getLoginUrl()} rel="noopener noreferrer">
-                  <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all" style={{ background: "rgba(212,160,23,0.08)", border: "1px solid rgba(212,160,23,0.2)", color: "#D4A017" }}
+                <button onClick={() => openAuthSheet({ returnUrl: window.location.href })} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all" style={{ background: "rgba(212,160,23,0.08)", border: "1px solid rgba(212,160,23,0.2)", color: "#D4A017" }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(212,160,23,0.15)")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(212,160,23,0.08)")}>
                     <LogIn size={14} />
                     <span className="text-sm font-medium">{t('nav.login')}</span>
                   </button>
-                </a>
-                <a href={getLoginUrl()} rel="noopener noreferrer">
-                  <button className="btn-gold text-sm px-4 py-2">{t('hero.ctaSecondary')}</button>
-                </a>
+                <button onClick={() => openAuthSheet({ returnUrl: window.location.href })} className="btn-gold text-sm px-4 py-2">{t('hero.ctaSecondary')}</button>
               </>
             ) : (
               /* Loading skeleton */
@@ -340,12 +337,10 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <a href={getLoginUrl()} rel="noopener noreferrer" className="block">
-                <div className="flex items-center gap-2 px-4 py-3 rounded-lg cursor-pointer" style={{ color: "#D4A017" }} onClick={() => setMobileOpen(false)}>
+              <button onClick={() => { setMobileOpen(false); openAuthSheet({ returnUrl: window.location.href }); }} className="w-full text-right flex items-center gap-2 px-4 py-3 rounded-lg cursor-pointer bg-transparent border-none" style={{ color: "#D4A017", fontFamily: "inherit" }}>
                   <LogIn size={15} />
                   {t('nav.login')} / {t('hero.ctaSecondary')}
-                </div>
-              </a>
+                </button>
             )}
           </div>
         </div>
