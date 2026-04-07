@@ -6,6 +6,7 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
+import { openAuthSheet } from "@/components/AuthSheet";
 import { Link } from "wouter";
 import { Loader2, Sparkles, Lock, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -205,18 +206,14 @@ export default function GuestTrialWidget({
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-                <Link href="/register" className="flex-1">
-                  <Button className="btn-gold w-full gap-2">
+                <button onClick={() => openAuthSheet({ returnUrl: platformReturnUrl, message: "سجّل مجاناً واحصل على 200 كريدت" })} className="flex-1 btn-gold gap-2 flex items-center justify-center py-2 px-4 rounded-lg">
                     <Sparkles size={14} />
                     سجّل مجاناً
-                  </Button>
-                </Link>
-                <a href={getLoginUrl(platformReturnUrl)} className="flex-1">
-                  <Button variant="outline" className="w-full gap-2 border-gold/30 text-gold hover:bg-gold/10">
+                  </button>
+                <button onClick={() => openAuthSheet({ returnUrl: platformReturnUrl })} className="flex-1 border border-gold/30 text-gold hover:bg-gold/10 gap-2 flex items-center justify-center py-2 px-4 rounded-lg">
                     <ArrowLeft size={14} />
                     تسجيل الدخول
-                  </Button>
-                </a>
+                  </button>
               </div>
             </div>
           </div>
@@ -224,9 +221,9 @@ export default function GuestTrialWidget({
           {/* Already have account? */}
           <p className="text-center text-steel text-xs">
             لديك حساب بالفعل؟{" "}
-            <a href={getLoginUrl(platformReturnUrl)} className="text-gold hover:underline">
+            <button onClick={() => openAuthSheet({ returnUrl: platformReturnUrl })} className="text-gold hover:underline bg-transparent border-none cursor-pointer p-0">
               سجّل دخولك لرؤية التقرير كاملاً
-            </a>
+            </button>
           </p>
         </div>
       )}
