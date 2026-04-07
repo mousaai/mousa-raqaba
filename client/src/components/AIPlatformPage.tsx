@@ -8,6 +8,7 @@ import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
+import { openAuthSheet } from "@/components/AuthSheet";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
 import {
@@ -69,6 +70,8 @@ function exportConversationAsPDF(
 
 export default function AIPlatformPage({ config }: { config: PlatformConfig }) {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
+  // isGuest is derived early so handleSend can reference it
+  const isGuest = !isAuthenticated || !user;
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionId, setSessionId] = useState<number | undefined>();
@@ -168,6 +171,14 @@ export default function AIPlatformPage({ config }: { config: PlatformConfig }) {
   const handleSend = () => {
     const trimmed = input.trim();
     if (!trimmed || chatMutation.isPending) return;
+    // Guest: intercept and show AuthSheet instead of sending
+    if (isGuest) {
+      openAuthSheet({
+        returnUrl: window.location.href,
+        message: `سجّل مجاناً واحصل على 200 كريدت لاستخدام ${config.name}`,
+      });
+      return;
+    }
     setMessages((prev) => [...prev, { role: "user", content: trimmed, timestamp: new Date() }]);
     setInput("");
     chatMutation.mutate({ platform: config.id, message: trimmed, sessionId });
@@ -213,68 +224,7 @@ export default function AIPlatformPage({ config }: { config: PlatformConfig }) {
     );
   }
 
-  if (!isAuthenticated || !user) {
-    // After login, redirect back to the current page using full URL
-    // Using window.location.origin ensures fada.mousa.ai users return to fada.mousa.ai (not mousa.ai)
-    const loginUrl = getLoginUrl(window.location.origin + window.location.pathname + window.location.search);
-    return (
-      <div className="min-h-screen flex flex-col" dir="rtl" style={{ background: "#080E1A" }}>
-        {/* Minimal header */}
-        <header className="sticky top-0 z-50 border-b" style={{ background: "rgba(8,14,26,0.95)", borderColor: "rgba(212,160,23,0.08)", backdropFilter: "blur(12px)" }}>
-          <div className="container flex items-center justify-between h-14">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: config.bg, border: `1px solid ${config.color}22` }}>
-                <Icon size={15} style={{ color: config.color }} />
-              </div>
-              <span className="text-platinum font-bold text-sm">{config.name}</span>
-              <span className="text-steel text-xs hidden sm:inline">— {config.tagline}</span>
-            </div>
-            <a href={loginUrl} className="text-gold text-sm font-semibold hover:underline">تسجيل الدخول</a>
-          </div>
-        </header>
-
-        {/* Main content: free trial + login */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
-          {/* Platform intro */}
-          <div className="text-center mb-8 max-w-md">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: config.bg, border: `1px solid ${config.color}33` }}>
-              <Icon size={28} style={{ color: config.color }} />
-            </div>
-            <h1 className="text-platinum font-bold text-2xl mb-2">{config.name}</h1>
-            <p className="text-steel text-sm leading-relaxed">{config.description}</p>
-          </div>
-
-          {/* Free trial widget */}
-          <div className="w-full max-w-lg mb-6">
-            <Suspense fallback={<div className="glass-card p-6 text-center text-steel text-sm">جاري التحميل...</div>}>
-              <GuestTrialWidget
-                platform={config.id}
-                platformName={config.name}
-                placeholder={config.placeholders[0]}
-                returnUrl={window.location.href}
-              />
-            </Suspense>
-          </div>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 w-full max-w-lg mb-6">
-            <div className="flex-1 h-px" style={{ background: "rgba(212,160,23,0.12)" }} />
-            <span className="text-steel text-xs">أو</span>
-            <div className="flex-1 h-px" style={{ background: "rgba(212,160,23,0.12)" }} />
-          </div>
-
-          {/* Login CTA */}
-          <div className="w-full max-w-lg">
-            <a href={loginUrl} className="btn-gold w-full justify-center flex items-center gap-2 text-base py-3">
-              <span>تسجيل الدخول للوصول الكامل</span>
-              <ArrowRight size={16} />
-            </a>
-            <p className="text-steel text-xs text-center mt-3">حساب واحد يمنحك وصولاً لجميع المنصات الست</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // isGuest already defined above — guest sees same UI but send is intercepted by AuthSheet
 
   return (
     <div className="min-h-screen flex flex-col" dir="rtl" style={{ background: "#080E1A" }}>
@@ -296,44 +246,60 @@ export default function AIPlatformPage({ config }: { config: PlatformConfig }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Credit display */}
+            {/* Guest: show sign-up CTA | Authenticated: show credit balance */}
+            {isGuest ? (
+              <button
+                onClick={() => openAuthSheet({ returnUrl: window.location.href, message: `سجّل مجاناً واحصل على 200 كريدت` })}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                style={{ background: "rgba(212,160,23,0.15)", border: "1px solid rgba(212,160,23,0.3)", color: "#d4a017" }}
+              >
+                <Sparkles size={12} />
+                سجّل مجاناً
+              </button>
+            ) : (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: canAfford ? "rgba(212,160,23,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${canAfford ? "rgba(212,160,23,0.2)" : "rgba(239,68,68,0.2)"}` }}>
               <Zap size={12} style={{ color: canAfford ? "#d4a017" : "#ef4444" }} />
               <span className="font-bold text-sm" style={{ color: canAfford ? "#d4a017" : "#ef4444" }}>{balance.toLocaleString()}</span>
               <span className="text-steel text-xs">كريدت</span>
             </div>
-            {/* Project profile button */}
-            <button
-              onClick={() => { setShowProfile(!showProfile); setShowHistory(false); }}
-              className="p-2 rounded-lg hover:bg-white/5 transition-colors relative"
-              title="ملف المشروع"
-            >
-              <Brain size={16} className={showProfile ? "text-gold" : "text-steel"} />
-              {hasProfile && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-400" />
-              )}
-            </button>
-            {/* New session */}
-            <button onClick={startNewSession} className="p-2 rounded-lg hover:bg-white/5 transition-colors" title="محادثة جديدة">
-              <Plus size={16} className="text-steel" />
-            </button>
-            {/* History */}
-            <button
-              onClick={() => { setShowHistory(!showHistory); setShowProfile(false); }}
-              className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-              title="السجل"
-            >
-              <History size={16} className={showHistory ? "text-gold" : "text-steel"} />
-            </button>
-            {/* Export PDF */}
-            {messages.length > 0 && (
-              <button
-                onClick={() => exportConversationAsPDF(messages, config.name, config.tagline)}
-                className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-                title="تصدير التقرير كـ PDF"
-              >
-                <Download size={16} className="text-steel" />
-              </button>
+            )}
+            {/* Authenticated-only controls */}
+            {!isGuest && (
+              <>
+                {/* Project profile button */}
+                <button
+                  onClick={() => { setShowProfile(!showProfile); setShowHistory(false); }}
+                  className="p-2 rounded-lg hover:bg-white/5 transition-colors relative"
+                  title="ملف المشروع"
+                >
+                  <Brain size={16} className={showProfile ? "text-gold" : "text-steel"} />
+                  {hasProfile && (
+                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-400" />
+                  )}
+                </button>
+                {/* New session */}
+                <button onClick={startNewSession} className="p-2 rounded-lg hover:bg-white/5 transition-colors" title="محادثة جديدة">
+                  <Plus size={16} className="text-steel" />
+                </button>
+                {/* History */}
+                <button
+                  onClick={() => { setShowHistory(!showHistory); setShowProfile(false); }}
+                  className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+                  title="السجل"
+                >
+                  <History size={16} className={showHistory ? "text-gold" : "text-steel"} />
+                </button>
+                {/* Export PDF */}
+                {messages.length > 0 && (
+                  <button
+                    onClick={() => exportConversationAsPDF(messages, config.name, config.tagline)}
+                    className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+                    title="تصدير التقرير كـ PDF"
+                  >
+                    <Download size={16} className="text-steel" />
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -524,7 +490,7 @@ export default function AIPlatformPage({ config }: { config: PlatformConfig }) {
                   ))}
                 </div>
 
-                {!canAfford && (
+                {!isGuest && !canAfford && (
                   <div className="mt-6 flex items-center gap-2 px-4 py-3 rounded-xl" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
                     <AlertCircle size={16} style={{ color: "#ef4444" }} />
                     <span className="text-sm" style={{ color: "#ef4444" }}>رصيدك غير كافٍ. <Link href="/pricing"><span className="underline cursor-pointer">اشحن الآن</span></Link></span>
@@ -592,7 +558,7 @@ export default function AIPlatformPage({ config }: { config: PlatformConfig }) {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={`اسأل ${config.name}...`}
-                disabled={!canAfford || chatMutation.isPending}
+                disabled={(!isGuest && !canAfford) || chatMutation.isPending}
                 rows={1}
                 className="flex-1 resize-none rounded-xl px-4 py-3 text-sm text-platinum placeholder-steel/50 outline-none transition-colors"
                 style={{
@@ -610,11 +576,11 @@ export default function AIPlatformPage({ config }: { config: PlatformConfig }) {
               <button
                 onClick={handleSend}
                 data-mousa-action="send_message"
-                disabled={!input.trim() || !canAfford || chatMutation.isPending}
+                disabled={!input.trim() || (!isGuest && !canAfford) || chatMutation.isPending}
                 className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all"
                 style={{
-                  background: input.trim() && canAfford && !chatMutation.isPending ? config.color : "rgba(255,255,255,0.06)",
-                  opacity: input.trim() && canAfford && !chatMutation.isPending ? 1 : 0.5,
+                  background: input.trim() && (isGuest || canAfford) && !chatMutation.isPending ? config.color : "rgba(255,255,255,0.06)",
+                  opacity: input.trim() && (isGuest || canAfford) && !chatMutation.isPending ? 1 : 0.5,
                 }}>
                 {chatMutation.isPending ? <Loader2 size={16} className="animate-spin text-white" /> : <Send size={16} className="text-white" />}
               </button>
