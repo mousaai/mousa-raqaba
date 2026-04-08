@@ -16,6 +16,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { ensureSubscriptionProducts } from "../stripeSubscriptions";
 import { startHealthMonitor } from "../healthMonitor";
+import { registerInternalRoutes } from "../internal.routes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -146,6 +147,10 @@ async function startServer() {
 
   // ⚠️ Stripe webhook MUST be registered BEFORE express.json() to preserve raw body
   registerStripeWebhook(app);
+
+
+  // ── Internal Routes (webhook, health, verify-token) ─────────────────────
+  registerInternalRoutes(app);
 
   // Body parser — reduced from 50MB to 5MB for security (DoS protection)
   app.use(express.json({ limit: "5mb" }));
