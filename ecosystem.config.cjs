@@ -13,6 +13,7 @@ module.exports = {
       BUILT_IN_FORGE_API_URL: "https://forge.manus.ai",
       BUILT_IN_FORGE_API_KEY: "9h8Ntk6wQ3qZ9bNu5wdqUD",
       MOUSA_API_URL: "https://www.mousa.ai",
+      WEBHOOK_SECRET: "816350e1619ed3ad26351ebfcfc3c65f9ba22929941767e4bbaa9f16b5cdeca7",
       PLATFORM_API_KEY: "711dab362bb6a4b52193eb38e7891cbdc1aaaa1bf3f463412353a13a35634090",
       MY_GOOGLE_AI_KEY: "AIzaSyAIMIAu6wWYjHj8CFjm4fq7uQOo2PNEibA",
       OPENAI_API_KEY: "AIzaSyAIMIAu6wWYjHj8CFjm4fq7uQOo2PNEibA",
